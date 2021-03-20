@@ -1,4 +1,4 @@
-{{define "yield"}}
+{{define "signupForm"}}
 <form>
   <div class="mb-3">
     <label for="email" class="form-label">Email address</label>
@@ -12,4 +12,12 @@
   sign up
   </button>
 </form>
+{{end}}
+
+{{define "yield"}}
+  <div class="card col-sm-4 mx-auto mt-4">
+    <h4 class="card-header">Sign Up Now!</h5>
+    <div class="card-body">
+        {{template "signupForm"}}
+  </div>
 {{end}}
