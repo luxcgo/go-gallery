@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/luxcgo/go-gallery/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -30,42 +31,86 @@ type User struct {
 func main() {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
 		host, port, user, password, dbname)
-
-	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
-		logger.Config{
-			SlowThreshold: time.Second, // Slow SQL threshold
-			LogLevel:      logger.Info, // Log level
-			Colorful:      true,        // Disable color
-		},
-	)
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: newLogger,
-	})
-
+	us, err := models.NewUserService(dsn)
 	if err != nil {
 		panic(err)
 	}
 
-	// db.AutoMigrate(&User{})
+	// use models packge methods
+	// query a user
+	user, err := us.ByID(1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(user)
 
-	// name, email := getInfo()
-	// u := &User{
-	// 	Name:  name,
-	// 	Email: email,
-	// }
-	// if err = db.Create(u).Error; err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Printf("%+v\n", u)
+	// drop the table and recreate it
+	us.DestructiveReset()
 
-	var u User
-	db.First(&u)
+	// query a user
+	user, err = us.ByID(1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(user)
+
+	// create a user
+	u := models.User{
+		Name:  "Michael Scott",
+		Email: "michael@dundermifflin.com",
+	}
+	if err := us.Create(&u); err != nil {
+		panic(err)
+	}
+
+	// query a user
+	foundUser, err := us.ByID(1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(foundUser)
+}
+
+func main1() {
+	// connect to db
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
+		host, port, user, password, dbname)
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold: time.Second,
+			LogLevel:      logger.Info,
+			Colorful:      true,
+		},
+	)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: newLogger,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// create table
+	db.AutoMigrate(&User{})
+
+	// create a user
+	name, email := getInfo()
+	u := &User{
+		Name:  name,
+		Email: email,
+	}
+	if err = db.Create(u).Error; err != nil {
+		panic(err)
+	}
+	fmt.Printf("%+v\n", u)
+
+	// query a user
+	var v User
+	db.First(&v)
 	if db.Error != nil {
 		panic(db.Error)
 	}
-	fmt.Println(u)
+	fmt.Println(v)
 
 }
 
