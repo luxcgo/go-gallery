@@ -36,6 +36,29 @@ func main() {
 		panic(err)
 	}
 
+	// Update the call to ByID to instead be ByEmail
+	foundUser, err := us.ByID(3)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(foundUser)
+
+	us.Update(&models.User{Model: gorm.Model{ID: 3}, Name: "sm", Email: "m@s.com"})
+	foundUser, err = us.ByID(3)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(foundUser)
+}
+
+func main2() {
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
+		host, port, user, password, dbname)
+	us, err := models.NewUserService(dsn)
+	if err != nil {
+		panic(err)
+	}
+
 	// use models packge methods
 	// query a user
 	user, err := us.ByID(1)
