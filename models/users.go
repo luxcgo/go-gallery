@@ -6,12 +6,15 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var (
+	userPwPepper = "secret-random-string"
+
 	// ErrNotFound is returned when a resource cannot be found // in the database.
 	ErrNotFound = errors.New("models: resource not found")
 
@@ -21,8 +24,10 @@ var (
 
 type User struct {
 	gorm.Model
-	Name  string
-	Email string `gorm:"not null;uniqueIndex"`
+	Name         string
+	Email        string `gorm:"not null;uniqueIndex"`
+	Password     string `gorm:"_"`
+	PasswordHash string `gorm:"not null"`
 }
 
 type UserService struct {
@@ -96,6 +101,14 @@ func (us *UserService) AutoMigrate() error {
 
 // Create will create the provided user and backfill data // like the ID, CreatedAt, and UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(
+		pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
 	return us.db.Create(user).Error
 }
 
