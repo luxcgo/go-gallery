@@ -6,6 +6,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/luxcgo/go-gallery/controllers"
+	"github.com/luxcgo/go-gallery/models"
+)
+
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "root"
+	password = "secret"
+	dbname   = "luxcgo_gallery"
 )
 
 func notFound(w http.ResponseWriter, r *http.Request) {
@@ -21,8 +30,18 @@ func must(err error) {
 }
 
 func main() {
+	// Create a DB connection string and then use it to
+	// create our model services.
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
+		host, port, user, password, dbname)
+	us, err := models.NewUserService(dsn)
+	if err != nil {
+		panic(err)
+	}
+	us.AutoMigrate()
+
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers()
+	usersC := controllers.NewUsers(us)
 
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
