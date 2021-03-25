@@ -35,20 +35,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	us.DestructiveReset()
 
-	// Update the call to ByID to instead be ByEmail
-	foundUser, err := us.ByID(3)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(foundUser)
+	// // Update the call to ByID to instead be ByEmail
+	// foundUser, err := us.ByID(3)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(foundUser)
 
-	us.Update(&models.User{Model: gorm.Model{ID: 3}, Name: "sm", Email: "m@s.com"})
-	foundUser, err = us.ByID(3)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(foundUser)
+	// us.Update(&models.User{Model: gorm.Model{ID: 3}, Name: "sm", Email: "m@s.com"})
+	// foundUser, err = us.ByID(3)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(foundUser)
 }
 
 func main2() {
