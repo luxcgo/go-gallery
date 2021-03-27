@@ -52,5 +52,6 @@ func main() {
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(notFound)
+	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 	http.ListenAndServe(":3000", r)
 }

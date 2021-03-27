@@ -8,7 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/luxcgo/go-gallery/hash"
 	"github.com/luxcgo/go-gallery/models"
+	"github.com/luxcgo/go-gallery/rand"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -29,6 +31,53 @@ type User struct {
 }
 
 func main() {
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
+		host, port, user, password, dbname)
+	us, err := models.NewUserService(dsn)
+	if err != nil {
+		panic(err)
+	}
+	us.DestructiveReset()
+	user := models.User{
+		Name:     "Michael Scott",
+		Email:    "michael@dundermifflin.com",
+		Password: "bestboss",
+	}
+	err = us.Create(&user)
+	if err != nil {
+		panic(err)
+	}
+	// Verify that the user has a Remember and RememberHash
+	fmt.Printf("%+v\n", user)
+	if user.Remember == "" {
+		panic("Invalid remember token")
+	}
+	// Now verify that we can lookup a user with that remember
+	// token
+	user2, err := us.ByRemember(user.Remember)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%+v\n", *user2)
+}
+
+func main5() {
+	hmac := hash.NewHMAC("my-secret-key")
+	// This should print out:
+	// 4waUFc1cnuxoM2oUOJfpGZLGP1asj35y7teuweSFgPY=
+	fmt.Println(hmac.Hash("this is my string to hash"))
+
+}
+
+func main4() {
+	fmt.Println(rand.String(10))
+	fmt.Println(rand.RememberToken())
+	fmt.Println(rand.RememberToken())
+	fmt.Println(rand.RememberToken())
+	fmt.Println(rand.RememberToken())
+}
+
+func main3() {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
 		host, port, user, password, dbname)
 	us, err := models.NewUserService(dsn)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/luxcgo/go-gallery/models"
+	"github.com/luxcgo/go-gallery/rand"
 	"github.com/luxcgo/go-gallery/views"
 )
 
@@ -40,9 +41,9 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(w, "Name is", form.Name)
-	fmt.Fprintln(w, "Email is", form.Email)
-	fmt.Fprintln(w, "Password is", form.Password)
+	// fmt.Fprintln(w, "Name is", form.Name)
+	// fmt.Fprintln(w, "Email is", form.Email)
+	// fmt.Fprintln(w, "Password is", form.Password)
 
 	user := models.User{
 		Name:     form.Name,
@@ -53,7 +54,16 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintln(w, "User is", user)
+	// fmt.Fprintln(w, "User is", user)
+
+	err := u.signIn(w, &user)
+	if err != nil {
+		// Temporarily render the error message for debugging
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Redirect to the cookie test page to test the cookie
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
 type SignupForm struct {
@@ -77,14 +87,60 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	user, err := u.us.Authenticate(form.Email, form.Password)
-	switch err {
-	case models.ErrNotFound:
-		fmt.Fprintln(w, "Invalid email address.")
-	case models.ErrInvalidPassword:
-		fmt.Fprintln(w, "Invalid password provided.")
-	case nil:
-		fmt.Fprintln(w, user)
-	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err != nil {
+		switch err {
+		case models.ErrNotFound:
+			fmt.Fprintln(w, "Invalid email address.")
+		case models.ErrInvalidPassword:
+			fmt.Fprintln(w, "Invalid password provided.")
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
 	}
+
+	err = u.signIn(w, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
+}
+
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("remember_token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// fmt.Fprintln(w, "Email is:", cookie.Value)
+	// fmt.Fprintln(w, "token is:", cookie.Value)
+	user, err := u.us.ByRemember(cookie.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintln(w, user)
+}
+
+// signIn is used to sign the given user in via cookies
+func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+		err = u.us.Update(user)
+		if err != nil {
+			return err
+		}
+	}
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    user.Remember,
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+	return nil
 }
