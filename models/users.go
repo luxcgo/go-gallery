@@ -32,6 +32,19 @@ var (
 	ErrInvalidPassword = errors.New("models: incorrect password provided")
 )
 
+// UserService is a set of methods used to manipulate and
+// work with the user model
+type UserService interface {
+	// Authenticate will verify the provided email address and
+	// password are correct. If they are correct, the user
+	// corresponding to that email will be returned. Otherwise
+	// You will receive either:
+	// ErrNotFound, ErrInvalidPassword, or another error if
+	// something goes wrong.
+	Authenticate(email, password string) (*User, error)
+	UserDB
+}
+
 // UserDB is used to interact with the users database.
 //
 // For pretty much all single user queries:
@@ -99,19 +112,19 @@ type User struct {
 	RememberHash string `gorm:"not null;uniqueIndex"`
 }
 
-func NewUserService(dsn string) (*UserService, error) {
+func NewUserService(dsn string) (UserService, error) {
 	ug, err := newUserGorm(dsn)
 	if err != nil {
 		return nil, err
 	}
-	return &UserService{
+	return &userService{
 		UserDB: &userValidator{
 			UserDB: ug,
 		},
 	}, nil
 }
 
-type UserService struct {
+type userService struct {
 	UserDB
 }
 
@@ -229,7 +242,7 @@ func first(db *gorm.DB, dst interface{}) error {
 //   user, nil
 // Otherwise if another error is encountered this will return
 //   nil, error
-func (us *UserService) Authenticate(email, password string) (*User, error) {
+func (us *userService) Authenticate(email, password string) (*User, error) {
 	foundUser, err := us.ByEmail(email)
 	if err != nil {
 		return nil, err
