@@ -269,13 +269,59 @@ func (uv *userValidator) ByID(id uint) (*User, error) {
 // ByRemember will hash the remember token and then call
 // ByRemember on the subsequent UserDB layer.
 func (uv *userValidator) ByRemember(token string) (*User, error) {
-	rememberHash := uv.hmac.Hash(token)
-	return uv.UserDB.ByRemember(rememberHash)
+	user := User{
+		Remember: token,
+	}
+	if err := runUserValFns(&user, uv.hmacRemember); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
 // Create will create the provided user and backfill data
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (uv *userValidator) Create(user *User) error {
+	err := runUserValFns(user,
+		uv.bcryptPassword,
+		uv.setRememberIfUnset,
+		uv.hmacRemember)
+	if err != nil {
+		return err
+	}
+	return uv.UserDB.Create(user)
+}
+
+// Update will hash a remember token if it is provided.
+func (uv *userValidator) Update(user *User) error {
+	err := runUserValFns(user,
+		uv.bcryptPassword,
+		uv.hmacRemember)
+	if err != nil {
+		return err
+	}
+	return uv.UserDB.Update(user)
+}
+
+// Delete will delete the user with the provided ID
+func (uv *userValidator) Delete(id uint) error {
+	var user User
+	user.ID = id
+	err := runUserValFns(&user, uv.idGreaterThan(0))
+	if err != nil {
+		return err
+	}
+	return uv.UserDB.Delete(id)
+}
+
+// bcryptPassword will hash a user's password with an
+// app-wide pepper and bcrypt, which salts for us.
+func (uv *userValidator) bcryptPassword(user *User) error {
+	if user.Password == "" {
+		// We DO NOT need to run this if the password
+		// hasn't been changed.
+		return nil
+	}
+
 	pwBytes := []byte(user.Password + userPwPepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes,
 		bcrypt.DefaultCost)
@@ -284,29 +330,45 @@ func (uv *userValidator) Create(user *User) error {
 	}
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
-		if err != nil {
+	return nil
+}
+
+type userValFn func(*User) error
+
+func runUserValFns(user *User, fns ...userValFn) error {
+	for _, fn := range fns {
+		if err := fn(user); err != nil {
 			return err
 		}
-		user.Remember = token
+	}
+	return nil
+}
+
+func (uv *userValidator) hmacRemember(user *User) error {
+	if user.Remember == "" {
+		return nil
 	}
 	user.RememberHash = uv.hmac.Hash(user.Remember)
-	return uv.UserDB.Create(user)
+	return nil
 }
 
-// Update will hash a remember token if it is provided.
-func (uv *userValidator) Update(user *User) error {
+func (uv *userValidator) setRememberIfUnset(user *User) error {
 	if user.Remember != "" {
-		user.RememberHash = uv.hmac.Hash(user.Remember)
+		return nil
 	}
-	return uv.UserDB.Update(user)
+	token, err := rand.RememberToken()
+	if err != nil {
+		return err
+	}
+	user.Remember = token
+	return nil
 }
 
-// Delete will delete the user with the provided ID
-func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
-	}
-	return uv.UserDB.Delete(id)
+func (uv *userValidator) idGreaterThan(n uint) userValFn {
+	return userValFn(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
 }
