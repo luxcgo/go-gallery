@@ -2,18 +2,13 @@ package models
 
 import (
 	"errors"
-	"log"
-	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/luxcgo/go-gallery/hash"
 	"github.com/luxcgo/go-gallery/rand"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 const hmacSecretKey = "secret-hmac-key"
@@ -113,36 +108,12 @@ type UserDB interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
-
-	// Migration helpers
-	AutoMigrate() error
-	DestructiveReset() error
 }
 
 // userGorm represents our database interaction layer
 // and implements the UserDB interface fully.
 type userGorm struct {
 	db *gorm.DB
-}
-
-func newUserGorm(dsn string) (*userGorm, error) {
-	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
-		logger.Config{
-			SlowThreshold: time.Second, // Slow SQL threshold
-			LogLevel:      logger.Info, // Log level
-			Colorful:      true,        // Disable color
-		},
-	)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: newLogger,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return &userGorm{
-		db: db,
-	}, nil
 }
 
 type User struct {
@@ -155,16 +126,13 @@ type User struct {
 	RememberHash string `gorm:"not null;uniqueIndex"`
 }
 
-func NewUserService(dsn string) (UserService, error) {
-	ug, err := newUserGorm(dsn)
-	if err != nil {
-		return nil, err
-	}
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
-	}, nil
+	}
 }
 
 type userService struct {
@@ -205,21 +173,6 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 		return nil, err
 	}
 	return &user, err
-}
-
-// DestructiveReset drops the user table and rebuilds it
-func (ug *userGorm) DestructiveReset() error {
-	ug.db.Migrator().DropTable(&User{})
-	return ug.AutoMigrate()
-}
-
-// AutoMigrate will attempt to automatically migrate the
-// users table
-func (ug *userGorm) AutoMigrate() error {
-	if err := ug.db.AutoMigrate(&User{}); err != nil {
-		return err
-	}
-	return nil
 }
 
 // Create will create the provided user and backfill data

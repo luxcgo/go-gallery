@@ -34,14 +34,15 @@ func main() {
 	// create our model services.
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
 		host, port, user, password, dbname)
-	us, err := models.NewUserService(dsn)
+	services, err := models.NewServices(dsn)
 	if err != nil {
 		panic(err)
 	}
-	us.AutoMigrate()
+
+	services.AutoMigrate()
 
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers(us)
+	usersC := controllers.NewUsers(services.User)
 
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
