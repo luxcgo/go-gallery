@@ -33,7 +33,7 @@ func NewServices(dsn string) (*Services, error) {
 	}
 	return &Services{
 		User:    NewUserService(db),
-		Gallery: &galleryGorm{},
+		Gallery: NewGalleryService(db),
 		db:      db,
 	}, nil
 }

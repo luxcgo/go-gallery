@@ -1,3 +1,11 @@
+{{define "yield"}}
+  <div class="card col-sm-4 mx-auto mt-4">
+    <h4 class="card-header">Welcome Back!</h5>
+    <div class="card-body">
+        {{template "loginForm"}}
+  </div>
+{{end}}
+
 {{define "loginForm"}}
 <form action="/login" method="POST">
   <div class="mb-3">
@@ -12,12 +20,4 @@
     Login
   </button>
 </form>
-{{end}}
-
-{{define "yield"}}
-  <div class="card col-sm-4 mx-auto mt-4">
-    <h4 class="card-header">Welcome Back!</h5>
-    <div class="card-body">
-        {{template "loginForm"}}
-  </div>
 {{end}}
