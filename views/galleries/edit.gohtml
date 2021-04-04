@@ -1,0 +1,17 @@
+{{define "yield"}}
+  <div class="card col-sm-4 mx-auto mt-4">
+    <h4 class="card-header">Edit your gallery</h4>
+    <div class="card-body">
+        {{template "editGalleryForm" .}}
+  </div>
+{{end}}
+
+{{define "editGalleryForm"}}
+<form action="/galleries/{{.ID}}/update" method="POST">
+  <div class="mb-3">
+    <label for="title" class="form-label">Title</label>
+    <input name="title" type="text" class="form-control" id="title" placeholder="What is the title of the gallery?" value="{{.Title}}">
+  </div>
+  <button type="submit" class="btn btn-primary">Update</button>
+</form>
+{{end}}
