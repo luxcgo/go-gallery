@@ -16,6 +16,11 @@
         <li class="nav-item">
           <a class="nav-link active" aria-current="page" href="/faq">FAQ</a>
         </li>
+        {{if .User}}
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/galleries">Galleries</a>
+          </li>
+        {{end}}
       </ul>
       <ul class="navbar-nav me-2">
           <li class="nav-item">
