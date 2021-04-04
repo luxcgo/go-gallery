@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/luxcgo/go-gallery/context"
 	"github.com/luxcgo/go-gallery/models"
 	"github.com/luxcgo/go-gallery/views"
 )
@@ -32,9 +33,13 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		g.New.Render(w, vd)
 		return
 	}
+
+	user := context.User(r.Context())
 	gallery := models.Gallery{
-		Title: form.Title,
+		Title:  form.Title,
+		UserID: user.ID,
 	}
+
 	if err := g.gs.Create(&gallery); err != nil {
 		vd.SetAlert(err)
 		g.New.Render(w, vd)
