@@ -1,20 +1,74 @@
 {{define "yield"}}
-  <div class="card col-sm-4 mx-auto mt-4">
-    <h4 class="card-header">Edit your gallery</h4>
-    <div class="card-body">
-        {{template "editGalleryForm" .}}
-  </div>
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h2>Edit your gallery</h2>
+            <hr>
+        </div>
+        <div class="col-md-12">
+            {{template "editGalleryForm" .}}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-1">
+            <label class="">
+                Images
+            </label>
+        </div>
+        <div class="col-md-10">
+            {{/* {{template "galleryImages" .}} */}}
+            <p>Coming soon...</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {{template "uploadImageForm" .}}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h3>Dangerous buttons...</h3>
+            <hr> 
+        </div>
+        <div class="col-md-12">
+            {{template "deleteGalleryForm" .}}
+        </div>
+    </div>
 {{end}}
 
 {{define "editGalleryForm"}}
 <form action="/galleries/{{.ID}}/update" method="POST">
-  <div class="mb-3">
-    <label for="title" class="form-label">Title</label>
-    <input name="title" type="text" class="form-control" id="title" placeholder="What is the title of the gallery?" value="{{.Title}}">
-  </div>
-  <button type="submit" class="btn btn-primary">Update</button>
+    <div class="row mb-3">
+        <label for="title" class="col-md-1 col-form-label">Title</label>
+        <div class="col-md-10">
+            <input name="title" type="text" class="form-control" id="title" 
+            placeholder="What is the title of the gallery?" value="{{.Title}}">
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </div>
 </form>
+{{end}}
+
+{{define "uploadImageForm"}}
+<form action="/galleries/{{.ID}}/images" method="POST" enctype="multipart/form-data">
+    <div class="row mb-3">
+        <label for="images" class="col-md-1 col-form-label">Add Images</label>
+        <div class="col-md-10">
+            <input class="form-control" type="file" id="images" name="images" multiple>
+            <p class="form-text">Please only use jpg, jpeg, and png.</p>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </div>
+    </div>
+</form>
+{{end}}
+
+{{define "deleteGalleryForm"}}
 <form action="/galleries/{{.ID}}/delete" method="POST">
-  <button type="submit" class="btn btn-danger">Delete</button>
+    <div class="row mb-3">
+        <div class="col-md-10 offset-md-1">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+    </div>
 </form>
 {{end}}

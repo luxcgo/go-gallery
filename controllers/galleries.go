@@ -1,7 +1,11 @@
 package controllers
 
 import (
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -11,6 +15,8 @@ import (
 )
 
 const (
+	maxMultipartMem = 1 << 20 // 1 megabyte
+
 	IndexGalleries = "index_galleries"
 	ShowGallery    = "show_gallery"
 	EditGallery    = "edit_gallery"
@@ -212,4 +218,80 @@ func (g *Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	var vd views.Data
 	vd.Yield = galleries
 	g.IndexView.Render(w, r, vd)
+}
+
+// POST /galleries/:id/images
+func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryByID(w, r)
+	if err != nil {
+		return
+	}
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery not found", http.StatusNotFound)
+		return
+	}
+
+	var vd views.Data
+	vd.Yield = gallery
+	err = r.ParseMultipartForm(maxMultipartMem)
+	if err != nil {
+		// If we can't parse the form just render an error alert on the
+		// edit gallery page.
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+		return
+	}
+
+	// Create the directory to contain our images
+	// filepath.Join will return a path like:
+	// images/galleries/123
+	// We use filepath.Join instead of building the path
+	// manually because the slashes and other characters
+	// could vary between operating systems.
+	galleryPath := filepath.Join("images", "galleries",
+		fmt.Sprintf("%v", gallery.ID))
+	// Create our directory (and any necessary parent dirs)
+	// using 0755 permissions.
+	err = os.MkdirAll(galleryPath, 0755)
+	if err != nil {
+		// If we get an error, render the edit gallery page again
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+		return
+	}
+
+	// Iterate over uploaded files to process them.
+	files := r.MultipartForm.File["images"]
+	fmt.Println("files", files)
+	for _, f := range files {
+		// Open the uploaded file
+		file, err := f.Open()
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		defer file.Close()
+		// Create a destination file
+		dst, err := os.Create(filepath.Join(galleryPath, f.Filename))
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		defer dst.Close()
+
+		_, err = io.Copy(dst, file)
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+	}
+	vd.Alert = &views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: "Images successfully uploaded!",
+	}
+	g.EditView.Render(w, r, vd)
 }
