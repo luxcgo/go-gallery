@@ -284,7 +284,8 @@ func (g *Galleries) ImageDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Get the filename from the path
-	filename := mux.Vars(r)["filename"] // Build the Image model
+	filename := mux.Vars(r)["filename"]
+	// Build the Image model
 	i := models.Image{
 		Filename:  filename,
 		GalleryID: gallery.ID,
