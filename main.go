@@ -31,11 +31,16 @@ func must(err error) {
 }
 
 func main() {
-	// Create a DB connection string and then use it to
-	// create our model services.
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
-		host, port, user, password, dbname)
-	services, err := models.NewServices(dsn)
+	cfg := DefaultConfig()
+	dbCfg := DefaultPostgresConfig()
+	services, err := models.NewServices(
+		models.WithGorm(dbCfg.ConnectionInfo()),
+		// Only log when not in prod
+		models.WithNewLogger(!cfg.IsProd()),
+		models.WithUser(cfg.Pepper, cfg.HMACKey),
+		models.WithGallery(),
+		models.WithImage(),
+	)
 	if err != nil {
 		panic(err)
 	}

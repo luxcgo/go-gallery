@@ -11,10 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const hmacSecretKey = "secret-hmac-key"
-
 const (
-	userPwPepper = "secret-random-string"
 
 	// ErrNotFound is returned when a resource cannot be found
 	// in the database.
@@ -126,17 +123,19 @@ type User struct {
 	RememberHash string `gorm:"not null;uniqueIndex"`
 }
 
-func NewUserService(db *gorm.DB) UserService {
+func NewUserService(db *gorm.DB, pepper, hmacKey string) UserService {
 	ug := &userGorm{db}
-	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := newUserValidator(ug, hmac)
+	hmac := hash.NewHMAC(hmacKey)
+	uv := newUserValidator(ug, hmac, pepper)
 	return &userService{
 		UserDB: uv,
+		pepper: pepper,
 	}
 }
 
 type userService struct {
 	UserDB
+	pepper string
 }
 
 // ByID will look up a user with the provided ID.
@@ -222,7 +221,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(foundUser.PasswordHash),
-		[]byte(password+userPwPepper))
+		[]byte(password+us.pepper))
 	switch err {
 	case nil:
 		return foundUser, nil
@@ -252,12 +251,14 @@ type userValidator struct {
 	UserDB
 	hmac       hash.HMAC
 	emailRegex *regexp.Regexp
+	pepper     string
 }
 
-func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+func newUserValidator(udb UserDB, hmac hash.HMAC, pepper string) *userValidator {
 	return &userValidator{
 		UserDB: udb,
 		hmac:   hmac,
+		pepper: pepper,
 		emailRegex: regexp.MustCompile(
 			`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
 	}
@@ -348,7 +349,7 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 		return nil
 	}
 
-	pwBytes := []byte(user.Password + userPwPepper)
+	pwBytes := []byte(user.Password + uv.pepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes,
 		bcrypt.DefaultCost)
 	if err != nil {
