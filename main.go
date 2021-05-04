@@ -31,8 +31,8 @@ func must(err error) {
 }
 
 func main() {
-	cfg := DefaultConfig()
-	dbCfg := DefaultPostgresConfig()
+	cfg := LoadConfig()
+	dbCfg := cfg.Database
 	services, err := models.NewServices(
 		models.WithGorm(dbCfg.ConnectionInfo()),
 		// Only log when not in prod
@@ -96,5 +96,5 @@ func main() {
 	r.HandleFunc("/galleries/{id:[0-9]+}/images/{filename}/delete",
 		requireUserMw.ApplyFn(galleriesC.ImageDelete)).
 		Methods("POST")
-	http.ListenAndServe(":3000", userMw.Apply(r))
+	http.ListenAndServe(":"+fmt.Sprint(cfg.Port), userMw.Apply(r))
 }
